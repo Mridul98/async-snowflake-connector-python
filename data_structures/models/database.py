@@ -1,16 +1,13 @@
-from pydantic import BaseModel, Field, ConfigDict, constr
-from typing import Optional, Literal
+from pydantic import Field
+from typing import Optional
 from datetime import datetime
-from data_structures.types.common_types import LogLevel
-from data_structures.types.database_types import DatabaseName, DatabaseKind, TraceLevel, Role
+from data_structures.types.snowflake_types import LogLevel
+from data_structures.models.base import SnowflakeResourceModel
+from data_structures.types.snowflake_types import DatabaseKind, TraceLevel, Role
 
 
-class Database(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    # ---------- Required ----------
-    name: DatabaseName = Field(..., description="Database name")
-
+class Database(SnowflakeResourceModel):
+ 
     # ---------- Optional Writeable ----------
     kind: Optional[DatabaseKind] = Field(
         "PERMANENT",

@@ -1,13 +1,10 @@
-from pydantic import BaseModel, Field, ConfigDict, constr
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
-from data_structures.types.database_role_types import DatabaseRoleIdentifier
+from data_structures.models.base import SnowflakeResourceModel
+from data_structures.types.snowflake_types import IdentifierType
 
-class DatabaseRole(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    # -------- Required --------
-    name: DatabaseRoleIdentifier = Field(..., description="Name of the database role")
+class DatabaseRole(SnowflakeResourceModel):
 
     # -------- Optional Writable --------
     comment: Optional[str] = Field(
@@ -40,13 +37,13 @@ class DatabaseRole(BaseModel):
         frozen=True
     )
 
-    owner: Optional[DatabaseRoleIdentifier] = Field(
+    owner: Optional[IdentifierType] = Field(
         None,
         frozen=True,
         description="Owning role"
     )
 
-    owner_role_type: Optional[DatabaseRoleIdentifier] = Field(
+    owner_role_type: Optional[IdentifierType] = Field(
         None,
         frozen=True,
         description="Type of owning role"

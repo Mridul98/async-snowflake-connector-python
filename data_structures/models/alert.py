@@ -1,13 +1,26 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Literal, Union
 from datetime import datetime
-from data_structures.types.alert_types import Schedule
+
+from data_structures.models.base import SnowflakeResourceModel
+
+class BaseSchedule(BaseModel):
+    schedule_type: str
 
 
-class Alert(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class CronSchedule(BaseSchedule):
+    schedule_type: Literal["CronSchedule"]
+    cron_expr: str
+    timezone: Optional[str] = None
 
-    name: str = Field(..., description="Name of the alert")
+
+class MinutesSchedule(BaseSchedule):
+    schedule_type: Literal["MinutesSchedule"]
+    minutes: int
+
+Schedule = Union[CronSchedule, MinutesSchedule]
+
+class Alert(SnowflakeResourceModel):
 
     comment: Optional[str] = Field(
         None,

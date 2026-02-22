@@ -1,17 +1,17 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from typing import Optional, Literal
+from pydantic import Field, EmailStr
+from typing import Optional
 from datetime import datetime
-from data_structures.types.account_types import AccountName, AccountEdition
+from data_structures.models.base import SnowflakeResourceModel
+from data_structures.types.snowflake_types import IdentifierType, AccountEdition
 
 
-class SnowflakeAccount(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class SnowflakeAccount(SnowflakeResourceModel):
 
     organization_name: Optional[str] = Field(
         None, description="Name of the organization.", frozen=True
     )
 
-    name: AccountName = Field(
+    name: IdentifierType = Field(
         ..., description="User-defined account name."
     )
 
