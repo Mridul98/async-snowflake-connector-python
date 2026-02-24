@@ -8,6 +8,13 @@ IdentifierType = Annotated[
     )
 ]
 
+CopyRegexType = Annotated[
+    str,
+    StringConstraints(
+        pattern=r'(?i)^COPY INTO .*'
+    )
+]
+
 AccountEdition = Literal["STANDARD", "ENTERPRISE", "BUSINESS_CRITICAL"]
 LogLevel = Literal["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "OFF"]
 
