@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# credential files
+credentials.toml
+*.p8
+*.pub
