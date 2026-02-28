@@ -19,10 +19,11 @@ class TestJWTTokenExpiration:
             client = SnowflakeJWTAuthClient(
                 account="TEST_ACCOUNT",
                 user="TEST_USER",
-                private_key_path="/home/granite/async-snowflake-connector-python/rsa_key.p8",
+                private_key_path="rsa_key.p8",
             )
             
-            await client.initialize()
+            with patch.object(client, 'initialize', AsyncMock()):
+                await client.initialize()
             
             # Set token as expired (past renew_time)
             client.token = "expired_token"
@@ -46,10 +47,11 @@ class TestJWTTokenExpiration:
             client = SnowflakeJWTAuthClient(
                 account="TEST_ACCOUNT",
                 user="TEST_USER",
-                private_key_path="/home/granite/async-snowflake-connector-python/rsa_key.p8",
+                private_key_path="rsa_key.p8",
             )
             
-            await client.initialize()
+            with patch.object(client, 'initialize', AsyncMock()):
+                await client.initialize()
             
             # Set token as valid (future renew_time)
             client.token = "valid_token"
@@ -73,10 +75,11 @@ class TestJWTTokenExpiration:
             client = SnowflakeJWTAuthClient(
                 account="TEST_ACCOUNT",
                 user="TEST_USER",
-                private_key_path="/home/granite/async-snowflake-connector-python/rsa_key.p8",
+                private_key_path="rsa_key.p8",
             )
             
-            await client.initialize()
+            with patch.object(client, 'initialize', AsyncMock()):
+                await client.initialize()
             
             # Set refresh time to be very soon
             client.renew_time = datetime.now(timezone.utc) + timedelta(seconds=1)
@@ -93,47 +96,37 @@ class TestJWTTokenExpiration:
     @pytest.mark.asyncio
     async def test_concurrent_token_requests_only_generate_once(self):
         """Test that concurrent requests don't trigger multiple token generations."""
-        # Track calls to the actual generate method
         call_tracker = {"count": 0, "lock": asyncio.Lock()}
-        
-        original_generate = SnowflakeJWTAuthClient._generate_token
         
         async def tracked_generate(self):
             async with call_tracker["lock"]:
                 call_tracker["count"] += 1
-                current_count = call_tracker["count"]
             
-            # Simulate slow token generation
             await asyncio.sleep(0.2)
             
-            # Call original to properly set token and renew_time
-            result = await original_generate(self)
-            
-            async with call_tracker["lock"]:
-                print(f"Generate called, total count: {call_tracker['count']}")
-            
-            return result
+            self.token = "tracked_token"
+            self.renew_time = datetime.now(timezone.utc) + timedelta(minutes=10)
+            return self.token
         
         client = SnowflakeJWTAuthClient(
             account="TEST_ACCOUNT",
             user="TEST_USER",
-            private_key_path="/home/granite/async-snowflake-connector-python/rsa_key.p8",
+            private_key_path="rsa_key.p8",
         )
         
-        await client.initialize()
+        with patch.object(client, 'initialize', AsyncMock()):
+            await client.initialize()
         
-        # Set token as expired to force refresh
         client.token = "expired_token"
         client.renew_time = datetime.now(timezone.utc) - timedelta(seconds=10)
         
-        # Patch the method
-        with patch.object(SnowflakeJWTAuthClient, '_generate_token', tracked_generate):
-            # Make concurrent requests
-            results = await asyncio.gather(
-                client.get_token(),
-                client.get_token(),
-                client.get_token(),
-            )
+        with patch.object(client, '_fingerprint', return_value="SHA256:abc123"):
+            with patch.object(SnowflakeJWTAuthClient, '_generate_token', tracked_generate):
+                results = await asyncio.gather(
+                    client.get_token(),
+                    client.get_token(),
+                    client.get_token(),
+                )
         
         # Should only generate token once despite 3 concurrent requests
         # The asyncio.Lock in get_token ensures only one generation happens
@@ -148,10 +141,20 @@ class TestJWTTokenExpiration:
         client = SnowflakeJWTAuthClient(
             account="TEST_ACCOUNT",
             user="TEST_USER",
-            private_key_path="/home/granite/async-snowflake-connector-python/rsa_key.p8",
+            private_key_path="rsa_key.p8",
         )
         
-        await client.initialize()
+        mock_key = MagicMock()
+        mock_key.public_key.return_value.public_bytes.return_value = b"mock_public_key_bytes"
+        
+        mock_file = AsyncMock()
+        mock_file.read = AsyncMock(return_value=b"fake_pem_data")
+        mock_file.__aenter__ = AsyncMock(return_value=mock_file)
+        mock_file.__aexit__ = AsyncMock(return_value=None)
+        
+        with patch('aiofiles.open', return_value=mock_file):
+            with patch('async_snowflake.authentication.auth_clients.load_pem_private_key', return_value=mock_key):
+                await client.initialize()
         
         # Verify refresh task is running
         assert client._refresh_task is not None
