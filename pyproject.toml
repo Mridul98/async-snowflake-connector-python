@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "async-snowflake"
-version = "0.1.1"
+version = "0.1.2"
 description = "Async Snowflake connector for Python with JWT authentication"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -45,9 +45,9 @@ cli = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Mridul98/async-snowflake"
-Documentation = "https://github.com/Mridul98/async-snowflake/readme.MD"
-Repository = "https://github.com/Mridul98/async-snowflake"
+Homepage = "https://github.com/Mridul98/async-snowflake-connector-python"
+Documentation = "https://async-snowflake.readthedocs.io"
+Repository = "https://github.com/Mridul98/async-snowflake-connector-python"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,0 +1,13 @@
+site_name: async-snowflake
+site_description: Async Snowflake Connector for Python
+site_url: https://async-snowflake.readthedocs.io
+repo_url: https://github.com/Mridul98/async-snowflake-connector-python
+
+docs_dir: .
+use_directory_urls: false
+
+nav:
+  - Home: README.md
+
+plugins:
+  - search
