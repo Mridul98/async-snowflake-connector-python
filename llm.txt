@@ -1,0 +1,636 @@
+# Async Snowflake Connector for Python
+
+An async Python connector for Snowflake using JWT authentication.
+
+---
+
+## Installation
+
+```bash
+pip install async-snowflake
+```
+
+---
+
+## Authentication
+
+### SnowflakeJWTAuthClient
+
+JWT authentication client for Snowflake with automatic token refresh.
+
+```python
+from async_snowflake import SnowflakeJWTAuthClient
+
+auth = SnowflakeJWTAuthClient(
+    account="YOUR_ACCOUNT",
+    user="YOUR_USER",
+    private_key_path="/path/to/private_key.pem",
+    lifetime_minutes=59,        # JWT token lifetime (default: 59)
+    renewal_minutes=54,         # Minutes before expiration to renew (default: 54)
+    auto_refresh=True,          # Enable background auto-refresh (default: True)
+)
+await auth.initialize()
+token = await auth.get_token()
+await auth.close()
+```
+
+**Parameters:**
+- `account` (str): Snowflake account identifier (e.g., "myaccount", "myaccount.global", "myaccount-region")
+- `user` (str): Snowflake username
+- `private_key_path` (str): Path to PEM-encoded RSA private key file
+- `lifetime_minutes` (int, optional): JWT token lifetime in minutes (default: 59)
+- `renewal_minutes` (int, optional): Minutes before expiration to renew token (default: 54)
+- `auto_refresh` (bool, optional): Enable automatic background token refresh (default: True)
+
+**Methods:**
+- `async initialize()`: Asynchronously load the private key and start background refresh
+- `async get_token() -> snowflake_auth_token`: Get current JWT token, generating new one if expired or close to expiration
+- `async close()`: Cancel background refresh tasks and clean up resources
+
+---
+
+### CredentialsManager
+
+Manage Snowflake credentials from TOML configuration file or environment variables.
+
+```python
+from async_snowflake import CredentialsManager
+
+# From TOML file
+creds = CredentialsManager(config_path=None, profile="default").credentials
+
+# From environment variables
+creds = CredentialsManager.from_environment()
+```
+
+**Constructor Parameters:**
+- `config_path` (str, optional): Path to credentials TOML file
+- `profile` (str, optional): Profile name in TOML file (default: "default")
+
+**Methods:**
+- `load() -> SnowflakeCredentials`: Load credentials from TOML config
+- `from_environment() -> SnowflakeCredentials`: Load credentials from environment variables
+
+**Environment Variables:**
+- `SNOWFLAKE_ACCOUNT`: Snowflake account identifier
+- `SNOWFLAKE_USER`: Snowflake username
+- `SNOWFLAKE_PRIVATE_KEY_PATH`: Path to private key
+- `SNOWFLAKE_REGION`: AWS region (default: "us-east-1")
+
+**TOML Configuration Format:**
+```toml
+[default]
+account = "YOUR_ACCOUNT"
+user = "YOUR_USER"
+private_key_path = "/path/to/private_key.pem"
+region = "us-east-1"
+
+[production]
+account = "PROD_ACCOUNT"
+user = "admin"
+private_key_path = "/path/to/prod_key.pem"
+```
+
+---
+
+### SnowflakeCredentials
+
+Dataclass holding Snowflake connection credentials.
+
+```python
+from async_snowflake import SnowflakeCredentials
+
+@dataclass
+class SnowflakeCredentials:
+    account: str
+    user: str
+    private_key_path: str
+    region: str = "us-east-1"
+    
+    @property
+    def base_url(self) -> str:  # e.g., "https://account.snowflakecomputing.com"
+    
+    def validate(self) -> bool:  # Returns True if credentials are set
+```
+
+---
+
+## Main Client
+
+### SnowflakeClient
+
+Main async client for Snowflake interactions with a fluent interface.
+
+```python
+import asyncio
+from async_snowflake import SnowflakeClient, SnowflakeJWTAuthClient
+
+async def main():
+    auth = SnowflakeJWTAuthClient(
+        account="YOUR_ACCOUNT",
+        user="YOUR_USER",
+        private_key_path="/path/to/private_key.pem",
+    )
+    
+    async with SnowflakeClient.create(
+        base_url="https://your-account.snowflakecomputing.com",
+        auth_client=auth,
+        timeout=60.0,
+    ) as client:
+        # Use client here
+        pass
+    
+    # Or without context manager:
+    client = await SnowflakeClient.create(
+        base_url="https://your-account.snowflakecomputing.com",
+        auth_client=auth,
+    )
+    await client.close()
+```
+
+**Factory Method:**
+- `async create(base_url: str, auth_client: SnowflakeBaseAuthClient, timeout: float = 60.0) -> SnowflakeClient`
+
+**Context Manager:**
+- `async __aenter__() -> SnowflakeClient`
+- `async __aexit__(exc_type, exc_val, exc_tb)`
+
+**Methods:**
+- `async close()`: Close the client and release resources
+- `async _request(method: str, path: str, **kwargs) -> httpx.Response`: Make authenticated HTTP request
+
+**Properties (Fluent Interface):**
+- `client.account -> AccountClient`: Account operations
+- `client.database -> DatabaseClient`: Database operations
+- `client.schema -> SchemaClient`: Schema operations
+- `client.table -> TableClient`: Table operations
+- `client.warehouse -> WarehouseClient`: Warehouse operations
+- `client.query -> QueryClient`: Query execution operations
+
+---
+
+## Endpoint Clients
+
+### AccountClient
+
+Operations for Snowflake account management.
+
+```python
+# Get current account
+account = await client.account.get_current_account()
+
+# List all accounts
+accounts = await client.account.list_accounts(like="pattern", show_limit=100)
+
+# Get specific account
+account = await client.account.get_account("account_name")
+```
+
+**Methods:**
+- `async get_current_account() -> SnowflakeAccount`: Get the current account details
+- `async list_accounts(like: Optional[str] = None, show_limit: Optional[int] = None) -> List[SnowflakeAccount]`: List all accounts in the organization
+- `async get_account(name: str) -> SnowflakeAccount`: Get a specific account by name
+
+---
+
+### DatabaseClient
+
+Operations for Snowflake database management.
+
+```python
+# List databases
+databases = await client.database.list(like="pattern", show_limit=100)
+
+# Create database
+db = await client.database.create(name="my_db", kind="PERMANENT", comment="My database")
+
+# Drop database
+await client.database.drop(name="my_db")
+
+# Describe database
+db = await client.database.describe("my_db")
+```
+
+**Methods:**
+- `async list(like: Optional[str] = None, show_limit: Optional[int] = None) -> List[Database]`: List all databases
+- `async create(name: str, kind: str = "PERMANENT", comment: Optional[str] = None) -> Database`: Create a new database
+- `async drop(name: str) -> None`: Drop a database
+- `async describe(name: str) -> Database`: Describe a database
+
+---
+
+### SchemaClient
+
+Operations for Snowflake schema management.
+
+```python
+# List schemas
+schemas = await client.schema.list(database="my_db", like="pattern", show_limit=100)
+
+# Create schema
+schema = await client.schema.create(name="my_schema", database="my_db", comment="My schema")
+
+# Drop schema
+await client.schema.drop(name="my_schema", database="my_db")
+
+# Describe schema
+schema = await client.schema.describe(name="my_schema", database="my_db")
+```
+
+**Methods:**
+- `async list(database: Optional[str] = None, like: Optional[str] = None, show_limit: Optional[int] = None) -> List[SchemaRead]`: List all schemas
+- `async create(name: str, database: str, comment: Optional[str] = None) -> SchemaRead`: Create a new schema
+- `async drop(name: str, database: str) -> None`: Drop a schema
+- `async describe(name: str, database: str) -> SchemaRead`: Describe a schema
+
+---
+
+### TableClient
+
+Operations for Snowflake table management.
+
+```python
+# List tables
+tables = await client.table.list(
+    database="my_db", 
+    schema="my_schema", 
+    like="pattern", 
+    show_limit=100
+)
+
+# Describe table
+table = await client.table.describe(name="my_table", database="my_db", schema="my_schema")
+
+# Get table columns
+columns = await client.table.get_columns(name="my_table", database="my_db", schema="my_schema")
+```
+
+**Methods:**
+- `async list(database: Optional[str] = None, schema: Optional[str] = None, like: Optional[str] = None, show_limit: Optional[int] = None) -> List[SnowflakeTable]`: List all tables
+- `async describe(name: str, database: str, schema: str) -> SnowflakeTable`: Describe a table
+- `async get_columns(name: str, database: str, schema: str) -> List[dict]`: Get columns of a table
+
+---
+
+### WarehouseClient
+
+Operations for Snowflake warehouse management.
+
+```python
+# List warehouses
+warehouses = await client.warehouse.list(like="pattern", show_limit=100)
+
+# Create warehouse
+wh = await client.warehouse.create(
+    name="my_wh", 
+    warehouse_size="SMALL", 
+    comment="My warehouse"
+)
+
+# Drop warehouse
+await client.warehouse.drop(name="my_wh")
+
+# Resume suspended warehouse
+wh = await client.warehouse.resume(name="my_wh")
+
+# Suspend running warehouse
+wh = await client.warehouse.suspend(name="my_wh")
+
+# Describe warehouse
+wh = await client.warehouse.describe(name="my_wh")
+```
+
+**Methods:**
+- `async list(like: Optional[str] = None, show_limit: Optional[int] = None) -> List[SnowflakeWarehouse]`: List all warehouses
+- `async create(name: str, warehouse_size: str = "SMALL", comment: Optional[str] = None) -> SnowflakeWarehouse`: Create a new warehouse
+- `async drop(name: str) -> None`: Drop a warehouse
+- `async resume(name: str) -> SnowflakeWarehouse`: Resume a suspended warehouse
+- `async suspend(name: str) -> SnowflakeWarehouse`: Suspend a running warehouse
+- `async describe(name: str) -> SnowflakeWarehouse`: Describe a warehouse
+
+---
+
+### QueryClient
+
+Operations for executing queries and managing query execution.
+
+```python
+# Execute synchronous query
+result = await client.query.execute(
+    sql="SELECT * FROM users LIMIT 10",
+    database="my_db",
+    schema="my_schema",
+    warehouse="my_wh",
+    timeout=60.0
+)
+print(result.rows)       # List of rows
+print(result.columns)    # Column names
+print(result.row_count) # Number of rows
+print(result.query_id)   # Query ID
+
+# Execute asynchronous query
+query_id = await client.query.execute_async(
+    sql="SELECT * FROM large_table",
+    database="my_db"
+)
+
+# Get query status
+status = await client.query.get_status(query_id)
+print(status.state)         # Query state
+print(status.error_message) # Error message if any
+
+# Get query results
+result = await client.query.get_results(query_id)
+
+# Cancel running query
+cancelled = await client.query.cancel(query_id)
+
+# Get query history
+history = await client.query.get_history(
+    user="username",
+    database="my_db",
+    schema="my_schema",
+    limit=100
+)
+```
+
+**Methods:**
+- `async execute(sql: str, database: Optional[str] = None, schema: Optional[str] = None, warehouse: Optional[str] = None, timeout: Optional[float] = None) -> QueryResult`: Execute a synchronous query
+- `async execute_async(sql: str, database: Optional[str] = None, schema: Optional[str] = None, warehouse: Optional[str] = None) -> str`: Execute a query asynchronously, returns query ID
+- `async get_status(query_id: str) -> QueryStatus`: Get the status of a query
+- `async get_results(query_id: str) -> QueryResult`: Get results of a completed query
+- `async cancel(query_id: str) -> bool`: Cancel a running query
+- `async get_history(user: Optional[str] = None, database: Optional[str] = None, schema: Optional[str] = None, limit: Optional[int] = 100) -> List[QueryHistoryEntry]`: Get query history
+
+---
+
+## Data Models
+
+### QueryResult
+
+Result from query execution.
+
+```python
+class QueryResult:
+    rows: Optional[List[List[Any]]]      # Query result rows
+    columns: Optional[List[str]]         # Column names
+    row_count: Optional[int]             # Number of rows
+    query_id: Optional[str]               # Query ID
+    query_state: Optional[str]           # Query state
+    error_message: Optional[str]        # Error message if any
+    
+    @property
+    def data: Optional[List[List[Any]]]  # Alias for rows
+    
+    @property
+    def status: Optional[str]            # Alias for query_state
+    
+    def __iter__() -> Iterator[List[Any]] # Iterate over rows
+    def __len__() -> int                 # Number of rows
+```
+
+### QueryStatus
+
+Status of an asynchronous query.
+
+```python
+class QueryStatus:
+    query_id: str
+    state: str                    # e.g., "RUNNING", "SUCCESS", "FAILED"
+    error_message: Optional[str]
+    row_count: Optional[int]
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+```
+
+### QueryHistoryEntry
+
+Entry in query history.
+
+```python
+class QueryHistoryEntry:
+    query_id: str
+    query_text: str
+    status: str
+    user_name: str
+    database_name: Optional[str]
+    schema_name: Optional[str]
+    warehouse_name: Optional[str]
+    start_time: Optional[datetime]
+    end_time: Optional[datetime]
+    total_elapsed_time: Optional[int]
+```
+
+### SnowflakeAccount
+
+Snowflake account information.
+
+```python
+class SnowflakeAccount:
+    # Various account attributes from Snowflake API
+```
+
+### Database
+
+Snowflake database information.
+
+```python
+class Database:
+    name: str
+    # Various database attributes from Snowflake API
+```
+
+### SchemaRead
+
+Snowflake schema information.
+
+```python
+class SchemaRead:
+    name: str
+    # Various schema attributes from Snowflake API
+```
+
+### SnowflakeTable
+
+Snowflake table information.
+
+```python
+class SnowflakeTable:
+    name: str
+    # Various table attributes from Snowflake API
+```
+
+### SnowflakeWarehouse
+
+Snowflake warehouse information.
+
+```python
+class SnowflakeWarehouse:
+    name: str
+    # Various warehouse attributes from Snowflake API
+```
+
+---
+
+## Code Examples
+
+### Quickstart
+
+```python
+import asyncio
+from async_snowflake import SnowflakeClient, SnowflakeJWTAuthClient
+
+async def main():
+    auth = SnowflakeJWTAuthClient(
+        account="YOUR_ACCOUNT",
+        user="YOUR_USER",
+        private_key_path="/path/to/private_key.pem",
+    )
+    
+    async with SnowflakeClient.create(
+        base_url="https://your-account.snowflakecomputing.com",
+        auth_client=auth,
+    ) as client:
+        # Execute queries
+        result = await client.query.execute("SELECT * FROM users LIMIT 10")
+        print(f"Rows: {result.rows}")
+        print(f"Columns: {result.columns}")
+        
+        # List databases
+        databases = await client.database.list()
+        for db in databases:
+            print(db.name)
+
+asyncio.run(main())
+```
+
+### Fluent Interface
+
+```python
+# Account operations
+await client.account.get_current_account()
+await client.account.list_accounts()
+
+# Database operations
+await client.database.list()
+await client.database.describe("my_db")
+
+# Schema operations
+await client.schema.list(database="my_db")
+await client.schema.describe("my_db", "my_schema")
+
+# Table operations
+await client.table.list(database="my_db", schema="my_schema")
+
+# Warehouse operations
+await client.warehouse.list()
+await client.warehouse.resume("warehouse_name")
+
+# Query execution
+result = await client.query.execute("SELECT * FROM table")
+```
+
+### FastAPI Integration
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from async_snowflake import SnowflakeClient, SnowflakeJWTAuthClient
+
+# Global client instance
+snowflake_client: SnowflakeClient = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global snowflake_client
+    
+    auth = SnowflakeJWTAuthClient(
+        account="YOUR_ACCOUNT",
+        user="YOUR_USER",
+        private_key_path="/path/to/private_key.pem",
+    )
+    
+    snowflake_client = await SnowflakeClient.create(
+        base_url="https://your-account.snowflakecomputing.com",
+        auth_client=auth,
+    )
+    
+    yield
+    
+    await snowflake_client.close()
+
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/users")
+async def get_users():
+    result = await snowflake_client.query.execute(
+        "SELECT * FROM users LIMIT 100"
+    )
+    return {"columns": result.columns, "rows": result.rows}
+
+@app.get("/databases")
+async def get_databases():
+    databases = await snowflake_client.database.list()
+    return {"databases": [db.model_dump() for db in databases]}
+```
+
+### Async Query Pattern
+
+```python
+import asyncio
+from async_snowflake import SnowflakeClient, SnowflakeJWTAuthClient
+
+async def run_long_query():
+    auth = SnowflakeJWTAuthClient(
+        account="YOUR_ACCOUNT",
+        user="YOUR_USER",
+        private_key_path="/path/to/private_key.pem",
+    )
+    
+    async with SnowflakeClient.create(
+        base_url="https://your-account.snowflakecomputing.com",
+        auth_client=auth,
+    ) as client:
+        # Start async query
+        query_id = await client.query.execute_async(
+            "SELECT * FROM very_large_table"
+        )
+        
+        # Poll for status
+        while True:
+            status = await client.query.get_status(query_id)
+            if status.state in ["SUCCESS", "FAILED"]:
+                break
+            await asyncio.sleep(5)
+        
+        # Get results
+        if status.state == "SUCCESS":
+            result = await client.query.get_results(query_id)
+            return result.rows
+        
+    return None
+
+asyncio.run(run_long_query())
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SNOWFLAKE_ACCOUNT` | Yes | Snowflake account identifier |
+| `SNOWFLAKE_USER` | Yes | Snowflake username |
+| `SNOWFLAKE_PRIVATE_KEY_PATH` | Yes | Path to PEM-encoded private key |
+| `SNOWFLAKE_REGION` | No | AWS region (default: "us-east-1") |
+
+---
+
+## Notes
+
+- The client uses JWT authentication with RS256 algorithm
+- Tokens are automatically refreshed in the background before expiration
+- All endpoint methods are async and must be awaited
+- The client supports both synchronous and asynchronous query execution
+- Connection pooling is handled automatically (max 20 connections, 10 keepalive)
+- Default request timeout is 60 seconds
