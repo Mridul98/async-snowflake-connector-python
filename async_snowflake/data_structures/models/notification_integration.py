@@ -12,7 +12,6 @@ class NotificationEmail(BaseModel):
 
 
 class NotificationIntegrationBase(SnowflakeResourceModel):
-  
     enabled: Optional[bool] = None
     comment: Optional[str] = None
     notification_hook: NotificationEmail

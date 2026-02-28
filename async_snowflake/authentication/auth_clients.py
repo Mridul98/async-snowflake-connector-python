@@ -10,7 +10,7 @@ import jwt as pyjwt
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     Encoding,
-    PublicFormat
+    PublicFormat,
 )
 from cryptography.hazmat.backends import default_backend
 
@@ -22,8 +22,8 @@ SUBJECT = "sub"
 
 snowflake_auth_token = NewType("snowflake_auth_token", str)
 
-class SnowflakeBaseAuthClient(ABC):
 
+class SnowflakeBaseAuthClient(ABC):
     @abstractmethod
     def get_token(self) -> snowflake_auth_token:
         """Get the current authentication token, generating a new one if necessary.
@@ -48,9 +48,9 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
     ):
         """JWT Authentication client for Snowflake.
         This client generates JWT tokens for Snowflake authentication and can automatically refresh them in the background before they expire.
-        The use of 
-        
-        
+        The use of
+
+
         Args:
             account: Snowflake account identifier (e.g. "myaccount", "myaccount.global", "myaccount-region").
             user: Snowflake username.
@@ -69,7 +69,7 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
         self.renewal_delay = timedelta(minutes=renewal_minutes)
 
         self.private_key = None
-        self.token : snowflake_auth_token = None
+        self.token: snowflake_auth_token = None
         self.renew_time = datetime.now(timezone.utc)
 
         self._lock = asyncio.Lock()
@@ -80,9 +80,9 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
 
     async def initialize(self):
         """Asynchronously load the private key and start background refresh if enabled.
-        Usage: 
+        Usage:
             client = SnowflakeJWTAuthClient(account, user, private_key_path)
-            await client.initialize()   
+            await client.initialize()
             token = await client.get_token()
 
         """
@@ -101,7 +101,7 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
         """Get the current JWT token, generating a new one if necessary.
         This method checks if the current token is still valid (i.e. not expired and not close to expiration).
         If the token is valid, it returns the existing token. If the token is expired or close to expiration, it generates a new token.
-        The method uses an asyncio lock to ensure that only one token generation occurs at a time, 
+        The method uses an asyncio lock to ensure that only one token generation occurs at a time,
         preventing multiple concurrent calls from triggering multiple token generations.
 
         returns: (snowflake_auth_token) The current valid JWT token for Snowflake authentication.
@@ -120,7 +120,7 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
             return await self._generate_token()
 
     async def close(self):
-        """ 
+        """
         Cancel any background refresh tasks and clean up resources.
         This method should be called when the client is no longer needed to ensure that any background tasks are properly terminated and resources are released.
         Example usage:
@@ -143,7 +143,7 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
         This method creates a new JWT token with the appropriate claims (issuer, subject, issue time, and expiration time) and signs it using the RSA private key.
         The generated token is stored in the instance variable `self.token`, and the next renewal time is calculated based on the current time
         and the specified renewal delay.
-        
+
         returns: (snowflake_auth_token) The newly generated JWT token for Snowflake authentication.
         """
         now = datetime.now(timezone.utc)
@@ -168,12 +168,14 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
 
     async def _background_refresh(self):
         """Background task that refreshes the JWT token before it expires.
-           This method runs in an infinite loop, sleeping until it's time to refresh the token based on the `renew_time`.
-           When it's time to refresh, it acquires the lock and generates a new token. If the task is cancelled (e.g. when the client is closed), it exits the loop gracefully.
+        This method runs in an infinite loop, sleeping until it's time to refresh the token based on the `renew_time`.
+        When it's time to refresh, it acquires the lock and generates a new token. If the task is cancelled (e.g. when the client is closed), it exits the loop gracefully.
         """
         while True:
             try:
-                sleep_seconds = (self.renew_time - datetime.now(timezone.utc)).total_seconds()
+                sleep_seconds = (
+                    self.renew_time - datetime.now(timezone.utc)
+                ).total_seconds()
                 # ensure we sleep at least 1 second to avoid tight loop if something goes wrong with time calculations
                 # this also gives some buffer time for the token to be renewed before it actually expires
                 # if the token is already expired or about to expire, we will generate a new one immediately in the next iteration.
@@ -186,7 +188,7 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
     def _fingerprint(self) -> str:
         """Generate a fingerprint of the public key for the JWT issuer claim.
         The fingerprint is calculated as the SHA-256 hash of the DER-encoded public key, and is prefixed with "SHA256:".
-        This method ensures that the issuer claim in the JWT token uniquely identifies the key used for signing, 
+        This method ensures that the issuer claim in the JWT token uniquely identifies the key used for signing,
         which is important for Snowflake to validate the token correctly.
 
         returns: (str) A string representing the fingerprint of the public key, in the format "SHA256:<base64-encoded-hash>".
@@ -205,8 +207,8 @@ class SnowflakeJWTAuthClient(SnowflakeBaseAuthClient):
             - myaccount
             - myaccount.global
             - myaccount-region
-        This method extracts the base account name by removing any region or global suffixes, 
-        ensuring consistent handling of the account identifier across different formats. 
+        This method extracts the base account name by removing any region or global suffixes,
+        ensuring consistent handling of the account identifier across different formats.
 
         returns: (str) The normalized account identifier in uppercase, without any region or global suffixes.
         Example: "myaccount", "myaccount.global", and "myaccount-region" would all be normalized to "MYACCOUNT".

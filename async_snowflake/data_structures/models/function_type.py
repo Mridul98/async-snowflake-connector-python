@@ -1,15 +1,16 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field
 from typing import Optional, List, Literal, Union, Annotated
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 
-class FunctionArgument(SnowflakeResourceModel):
 
+class FunctionArgument(SnowflakeResourceModel):
     datatype: str = "TEXT"
 
-class BaseFunction(SnowflakeResourceModel):
 
+class BaseFunction(SnowflakeResourceModel):
     function_type: str
+
 
 class ServiceFunction(SnowflakeResourceModel):
     function_type: Literal["service-function"] = "service-function"
@@ -28,7 +29,5 @@ class ServiceFunction(SnowflakeResourceModel):
     # ---------- Readonly ----------
     created_on: Optional[datetime] = Field(None, frozen=True)
 
-FunctionModel = Annotated[
-    Union[ServiceFunction],
-    Field(discriminator="function_type")
-]
+
+FunctionModel = Annotated[Union[ServiceFunction], Field(discriminator="function_type")]

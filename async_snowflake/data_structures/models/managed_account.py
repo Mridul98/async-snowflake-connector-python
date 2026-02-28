@@ -1,11 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional, Literal
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 
 
 class ManagedAccountBase(SnowflakeResourceModel):
-
     comment: Optional[str] = None
     admin_name: Optional[str] = None
     admin_password: Optional[str] = Field(default=None, description="password")

@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Optional, Literal
-from async_snowflake.data_structures.models.base import SnowflakeResourceModel 
+from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 # Column constraints
 class PrimaryKeyConstraint(BaseModel):
@@ -9,6 +10,7 @@ class PrimaryKeyConstraint(BaseModel):
     column_names: List[str]
     constraint_type: Literal["PrimaryKey"] = "PrimaryKey"
     comment: Optional[str] = None
+
 
 # Column definition
 class TableColumn(BaseModel):
@@ -23,9 +25,9 @@ class TableColumn(BaseModel):
     constraints: Optional[List[PrimaryKeyConstraint]] = []
     comment: Optional[str] = None
 
+
 # Main Table model
 class SnowflakeTable(SnowflakeResourceModel):
-
     kind: Optional[str] = "PERMANENT"  # PERMANENT, TRANSIENT, TEMPORARY
     cluster_by: Optional[List[str]] = []
     enable_schema_evolution: Optional[bool] = False
@@ -51,4 +53,6 @@ class SnowflakeTable(SnowflakeResourceModel):
     search_optimization_bytes: Optional[int] = None
     owner_role_type: Optional[str] = None
     budget: Optional[str] = None
-    table_type: Optional[str] = None  # NORMAL, DYNAMIC, EXTERNAL, EVENT, HYBRID, ICEBERG, IMMUTABLE
+    table_type: Optional[str] = (
+        None  # NORMAL, DYNAMIC, EXTERNAL, EVENT, HYBRID, ICEBERG, IMMUTABLE
+    )

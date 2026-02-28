@@ -1,4 +1,4 @@
-from pydantic import BaseModel, constr
+from pydantic import BaseModel
 from typing import Optional, List, Union
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
@@ -6,14 +6,12 @@ from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class ServiceSpecStageFile(BaseModel):
-
     spec_type: str = "ServiceSpecStageFile"
     stage: str
     spec_file: str
 
 
 class ServiceBase(SnowflakeResourceModel):
-   
     compute_pool: str
     auto_resume: Optional[bool] = None
     min_ready_instances: Optional[int] = None
@@ -28,7 +26,6 @@ class ServiceBase(SnowflakeResourceModel):
 
 
 class ServiceRead(ServiceBase):
-
     current_instances: Optional[int] = None
     target_instances: Optional[int] = None
     database_name: Optional[IdentifierType] = None

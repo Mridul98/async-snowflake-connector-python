@@ -3,12 +3,14 @@ from typing import Annotated, Optional
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 
 
-IntegerType = Annotated[int,Field(ge=0)]
+IntegerType = Annotated[int, Field(ge=0)]
+
 
 class SnowflakeWarehouse(SnowflakeResourceModel):
-    
     warehouse_type: Optional[str] = None  # STANDARD, SNOWPARK-OPTIMIZED
-    warehouse_size: Optional[str] = None  # XSMALL, SMALL, MEDIUM, LARGE, XLARGE, XXLARGE, XXXLARGE, X4LARGE, X5LARGE, X6LARGE
+    warehouse_size: Optional[str] = (
+        None  # XSMALL, SMALL, MEDIUM, LARGE, XLARGE, XXLARGE, XXXLARGE, X4LARGE, X5LARGE, X6LARGE
+    )
     wait_for_completion: Optional[str] = None  # "true" or "false"
     max_cluster_count: Optional[IntegerType] = None
     min_cluster_count: Optional[IntegerType] = None
@@ -24,7 +26,7 @@ class SnowflakeWarehouse(SnowflakeResourceModel):
     statement_queued_timeout_in_seconds: Optional[IntegerType] = None
     statement_timeout_in_seconds: Optional[IntegerType] = None
     target_statement_size: Optional[str] = None  # X-Small, Small, Medium, etc.
-    
+
     # Readonly fields
     state: Optional[str] = None  # STARTED, STARTING, DYNAMIC, etc.
     started_clusters: Optional[IntegerType] = None

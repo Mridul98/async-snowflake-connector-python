@@ -3,16 +3,16 @@ from typing import Optional
 from datetime import datetime
 from async_snowflake.data_structures.types.snowflake_types import LogLevel
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import DatabaseKind, TraceLevel, Role
+from async_snowflake.data_structures.types.snowflake_types import (
+    DatabaseKind,
+    TraceLevel,
+    Role,
+)
 
 
 class Database(SnowflakeResourceModel):
- 
     # ---------- Optional Writeable ----------
-    kind: Optional[DatabaseKind] = Field(
-        "PERMANENT",
-        description="Database type"
-    )
+    kind: Optional[DatabaseKind] = Field("PERMANENT", description="Database type")
 
     comment: Optional[str] = None
 

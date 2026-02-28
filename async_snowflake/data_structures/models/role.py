@@ -1,11 +1,10 @@
-from pydantic import BaseModel, Field, constr
 from typing import Optional
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
+
 class RoleBase(SnowflakeResourceModel):
-    
     comment: Optional[str] = None
 
 

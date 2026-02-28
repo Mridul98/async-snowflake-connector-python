@@ -1,12 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional, List
 from datetime import datetime
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType 
+from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 
 
 class NotebookVersionDetails(SnowflakeResourceModel):
-
     alias: Optional[str] = None
     location_url: Optional[str] = None
     source_location_uri: Optional[str] = None
@@ -14,7 +13,6 @@ class NotebookVersionDetails(SnowflakeResourceModel):
 
 
 class NotebookBase(SnowflakeResourceModel):
-
     version: Optional[str] = None
     fromLocation: Optional[str] = None
     main_file: Optional[str] = None
@@ -37,7 +35,6 @@ class NotebookCreate(NotebookBase):
 
 
 class NotebookRead(NotebookBase):
-
     created_on: Optional[datetime] = None
 
     database_name: Optional[str] = Field(default=None, pattern=IdentifierType)

@@ -5,10 +5,10 @@ from async_snowflake.data_structures.models.schema import SchemaRead
 
 class SchemaClient:
     """Client for Snowflake Schema operations."""
-    
+
     def __init__(self, client: SnowflakeClient):
         self._client = client
-    
+
     async def list(
         self,
         database: Optional[str] = None,
@@ -21,16 +21,16 @@ class SchemaClient:
             params["like"] = like
         if show_limit:
             params["showLimit"] = show_limit
-        
+
         if database:
             path = f"/api/v2/databases/{database}/schemas"
         else:
             path = "/api/v2/databases"
-        
+
         response = await self._client._request("GET", path, params=params)
         response.raise_for_status()
         data = response.json()
-        
+
         if isinstance(data, list):
             if database:
                 schemas = []
@@ -40,7 +40,7 @@ class SchemaClient:
                 return [SchemaRead(**s) for s in schemas]
             return [SchemaRead(**s) for s in data]
         return [SchemaRead(**s) for s in data.get("schemas", [])]
-    
+
     async def create(
         self,
         name: str,
@@ -51,7 +51,7 @@ class SchemaClient:
         body = {"name": name}
         if comment:
             body["comment"] = comment
-        
+
         response = await self._client._request(
             "POST",
             f"/api/v2/databases/{database}/schemas",
@@ -60,7 +60,7 @@ class SchemaClient:
         response.raise_for_status()
         data = response.json()
         return SchemaRead(**data)
-    
+
     async def drop(self, name: str, database: str) -> None:
         """Drop a schema."""
         response = await self._client._request(
@@ -68,7 +68,7 @@ class SchemaClient:
             f"/api/v2/databases/{database}/schemas/{name}",
         )
         response.raise_for_status()
-    
+
     async def describe(self, name: str, database: str) -> SchemaRead:
         """Describe a schema."""
         response = await self._client._request(

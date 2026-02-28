@@ -1,8 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Union, Annotated
+from typing import Optional, Literal, List, Union
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 class DynamicColumn(BaseModel):
     name: IdentifierType
@@ -27,7 +28,6 @@ TargetLag = Union[UserDefinedLag, DownstreamLag]
 
 
 class DynamicTable(SnowflakeResourceModel):
-
     target_lag: TargetLag = Field(..., discriminator="type")
     warehouse: IdentifierType
     query: str
@@ -37,13 +37,9 @@ class DynamicTable(SnowflakeResourceModel):
 
     columns: Optional[List[DynamicColumn]] = None
 
-    refresh_mode: Optional[
-        Literal["AUTO", "FULL", "INCREMENTAL"]
-    ] = None
+    refresh_mode: Optional[Literal["AUTO", "FULL", "INCREMENTAL"]] = None
 
-    initialize: Optional[
-        Literal["ON_CREATE", "ON_SCHEDULE"]
-    ] = None
+    initialize: Optional[Literal["ON_CREATE", "ON_SCHEDULE"]] = None
 
     cluster_by: Optional[List[str]] = None
 
@@ -61,9 +57,9 @@ class DynamicTable(SnowflakeResourceModel):
     rows: Optional[int] = Field(None, ge=0, frozen=True)
     bytes: Optional[int] = Field(None, ge=0, frozen=True)
 
-    scheduling_state: Optional[
-        Literal["RUNNING", "SUSPENDED"]
-    ] = Field(None, frozen=True)
+    scheduling_state: Optional[Literal["RUNNING", "SUSPENDED"]] = Field(
+        None, frozen=True
+    )
 
     automatic_clustering: Optional[bool] = Field(None, frozen=True)
 

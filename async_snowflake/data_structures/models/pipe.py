@@ -2,13 +2,15 @@ from pydantic import Field
 from typing import Optional
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType, CopyRegexType
+from async_snowflake.data_structures.types.snowflake_types import (
+    IdentifierType,
+    CopyRegexType,
+)
 
 
 class PipeBase(SnowflakeResourceModel):
-    
     copy_statement: CopyRegexType
-    
+
     comment: Optional[str] = None
     auto_ingest: Optional[bool] = None
     error_integration: Optional[str] = None

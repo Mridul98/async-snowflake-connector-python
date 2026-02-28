@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional, Annotated
 from pydantic import Field
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 class ComputePoolState(str, Enum):
     UNKNOWN = "UNKNOWN"
@@ -14,10 +14,10 @@ class ComputePoolState(str, Enum):
     SUSPENDED = "SUSPENDED"
     RESIZING = "RESIZING"
 
+
 class ComputePool(SnowflakeResourceModel):
-    
     min_nodes: Annotated[int, Field(strict=True, ge=0)]
-    max_nodes: Annotated[int,Field(strict=True, ge=0)]
+    max_nodes: Annotated[int, Field(strict=True, ge=0)]
 
     instance_family: str
 

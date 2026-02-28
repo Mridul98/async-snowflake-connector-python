@@ -1,11 +1,13 @@
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class PointOfTimeTimestamp(BaseModel):
-    point_of_time_type: Literal["PointOfTimeTimestamp"] = Field(..., alias="point_of_time_type")
+    point_of_time_type: Literal["PointOfTimeTimestamp"] = Field(
+        ..., alias="point_of_time_type"
+    )
     reference: Literal["at", "before"]
     timestamp: Optional[str] = None  # e.g., TO_TIMESTAMP(1749423600)
 

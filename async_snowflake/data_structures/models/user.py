@@ -2,8 +2,8 @@ from pydantic import EmailStr, Field
 from typing import Optional
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 
+
 class SnowflakeUser(SnowflakeResourceModel):
-    
     password: Optional[str] = Field(None, repr=False)  # sensitive field
     login_name: Optional[str] = None
     display_name: Optional[str] = None

@@ -3,13 +3,14 @@ from typing import List, Optional
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
+
 class ViewColumn(BaseModel):
     name: IdentifierType
     comment: Optional[str] = None
     datatype: Optional[str] = None  # readonly
 
+
 class SnowflakeView(SnowflakeResourceModel):
-    
     secure: Optional[bool] = None
     kind: Optional[str] = "PERMANENT"  # default PERMANENT
     recursive: Optional[bool] = None

@@ -1,6 +1,6 @@
-from pydantic import BaseModel, constr, Field
-from typing import List, Optional, Union, Literal
-from async_snowflake.data_structures.models.base import SnowflakeResourceModel 
+from pydantic import BaseModel
+from typing import List, Optional, Literal
+from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
@@ -11,7 +11,6 @@ class UDFArgumentReturnType(BaseModel):
 
 
 class UDFArgument(SnowflakeResourceModel):
-    
     datatype: str
     default_value: Optional[str] = None
     return_type: UDFArgumentReturnType
@@ -27,7 +26,6 @@ class JavaLanguageConfig(BaseModel):
 
 
 class SnowflakeUDF(SnowflakeResourceModel):
-    
     is_temporary: Optional[bool] = None
     is_aggregate: Optional[bool] = None
     is_memoizable: Optional[bool] = None

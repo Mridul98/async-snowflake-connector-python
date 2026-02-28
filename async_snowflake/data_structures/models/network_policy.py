@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional, List
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
@@ -6,7 +6,6 @@ from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class NetworkPolicyBase(SnowflakeResourceModel):
-
     allowed_network_rule_list: Optional[List[str]] = None
     blocked_network_rule_list: Optional[List[str]] = None
     allowed_ip_list: Optional[List[str]] = None

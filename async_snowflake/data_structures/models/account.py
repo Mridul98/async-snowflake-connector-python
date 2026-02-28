@@ -2,26 +2,24 @@ from pydantic import Field, EmailStr
 from typing import Optional
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType, AccountEdition
+from async_snowflake.data_structures.types.snowflake_types import (
+    IdentifierType,
+    AccountEdition,
+)
 
 
 class SnowflakeAccount(SnowflakeResourceModel):
-
     organization_name: Optional[str] = Field(
         None, description="Name of the organization.", frozen=True
     )
 
-    name: IdentifierType = Field(
-        ..., description="User-defined account name."
-    )
+    name: IdentifierType = Field(..., description="User-defined account name.")
 
     region_group: Optional[str] = Field(
         None, description="Region group where account is located."
     )
 
-    region: Optional[str] = Field(
-        None, description="Snowflake region of the account."
-    )
+    region: Optional[str] = Field(None, description="Snowflake region of the account.")
 
     edition: AccountEdition = Field(
         ..., description="Snowflake Edition of the account."
@@ -67,13 +65,9 @@ class SnowflakeAccount(SnowflakeResourceModel):
 
     moved_to_organization: Optional[str] = Field(None, frozen=True)
 
-    admin_name: Optional[str] = Field(
-        ..., description="Account administrator name."
-    )
+    admin_name: Optional[str] = Field(..., description="Account administrator name.")
 
-    admin_password: Optional[str] = Field(
-        None, description="Admin password."
-    )
+    admin_password: Optional[str] = Field(None, description="Admin password.")
 
     admin_rsa_public_key: Optional[str] = Field(
         None, description="Admin RSA public key."
@@ -83,9 +77,7 @@ class SnowflakeAccount(SnowflakeResourceModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
-    email: Optional[EmailStr] = Field(
-        ..., description="Admin email."
-    )
+    email: Optional[EmailStr] = Field(..., description="Admin email.")
 
     must_change_password: Optional[bool] = None
 

@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from typing import Optional, Literal, Union
 from datetime import datetime
 
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
+
 
 class BaseSchedule(BaseModel):
     schedule_type: str
@@ -18,32 +19,26 @@ class MinutesSchedule(BaseSchedule):
     schedule_type: Literal["MinutesSchedule"]
     minutes: int
 
+
 Schedule = Union[CronSchedule, MinutesSchedule]
 
-class Alert(SnowflakeResourceModel):
 
+class Alert(SnowflakeResourceModel):
     comment: Optional[str] = Field(
-        None,
-        description="User comment associated to the alert"
+        None, description="User comment associated to the alert"
     )
 
     schedule: Schedule = Field(
-        ...,
-        discriminator="schedule_type",
-        description="Execution schedule"
+        ..., discriminator="schedule_type", description="Execution schedule"
     )
 
     warehouse: Optional[str] = None
 
     condition: str = Field(
-        ...,
-        description="SQL statement evaluated to determine if alert triggers"
+        ..., description="SQL statement evaluated to determine if alert triggers"
     )
 
-    action: str = Field(
-        ...,
-        description="SQL statement executed when alert triggers"
-    )
+    action: str = Field(..., description="SQL statement executed when alert triggers")
 
     # ---------- Readonly Fields ----------
 

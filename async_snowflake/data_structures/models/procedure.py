@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, constr
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
@@ -6,7 +6,6 @@ from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class ProcedureArgument(SnowflakeResourceModel):
-
     datatype: str
     default_value: Optional[str] = None
     nullable: Optional[bool] = None
@@ -16,8 +15,7 @@ class ProcedureArgument(SnowflakeResourceModel):
 # Procedure Return Type
 # ---------------------------
 class ProcedureReturnType(BaseModel):
-
-    type: IdentifierType # DATATYPE or TABLE
+    type: IdentifierType  # DATATYPE or TABLE
     datatype: Optional[str] = None
 
 
@@ -40,7 +38,6 @@ class ProcedureLanguageConfig(BaseModel):
 # Base Procedure Model
 # ---------------------------
 class ProcedureBase(SnowflakeResourceModel):
-
     execute_as: Optional[str] = None  # CALLER or OWNER
     is_secure: Optional[bool] = None
     arguments: List[ProcedureArgument]

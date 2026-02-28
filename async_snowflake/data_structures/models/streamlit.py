@@ -1,7 +1,8 @@
-from pydantic import BaseModel, constr
+from pydantic import BaseModel
 from typing import List, Optional
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 # Version details for Streamlit
 class StreamlitVersionDetails(BaseModel):
@@ -11,9 +12,9 @@ class StreamlitVersionDetails(BaseModel):
     source_location_uri: str
     git_commit_hash: str
 
+
 # Main Streamlit app object
 class StreamlitApp(SnowflakeResourceModel):
-    
     comment: Optional[str] = None
     imports: Optional[List[str]] = []
     external_access_integrations: Optional[List[str]] = []

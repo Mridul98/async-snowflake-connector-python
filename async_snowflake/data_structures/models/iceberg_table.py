@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Literal
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
@@ -25,7 +25,6 @@ Constraint = PrimaryKeyConstraint
 
 # ---------- Main Table ----------
 class IcebergTable(SnowflakeResourceModel):
-
     # optional
     comment: Optional[str] = None
     change_tracking: Optional[bool] = None
@@ -34,9 +33,7 @@ class IcebergTable(SnowflakeResourceModel):
     data_retention_time_in_days: Optional[int] = None
     catalog_sync: Optional[str] = None
     catalog: Optional[str] = None
-    storage_serialization_policy: Optional[
-        Literal["COMPATIBLE", "OPTIMIZED"]
-    ] = None
+    storage_serialization_policy: Optional[Literal["COMPATIBLE", "OPTIMIZED"]] = None
 
     # readonly fields (still allowed in model for responses)
     created_on: Optional[datetime] = None

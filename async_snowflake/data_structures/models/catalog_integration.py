@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional, Literal, Union
 from pydantic import BaseModel, Field
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 class TableFormat(str, Enum):
     ICEBERG = "ICEBERG"
@@ -16,8 +16,10 @@ class IntegrationType(str, Enum):
 class IntegrationCategory(str, Enum):
     CATALOG = "CATALOG"
 
+
 class CatalogBase(BaseModel):
     catalog_source: str
+
 
 class GlueCatalog(CatalogBase):
     catalog_source: Literal["Glue"]
@@ -27,14 +29,12 @@ class GlueCatalog(CatalogBase):
     glue_region: Optional[str] = None
     catalog_namespace: Optional[str] = None
 
+
 CatalogType = Union[GlueCatalog]
 
-class CatalogIntegration(SnowflakeResourceModel):
 
-    catalog: CatalogType = Field(
-        ...,
-        discriminator="catalog_source"
-    )
+class CatalogIntegration(SnowflakeResourceModel):
+    catalog: CatalogType = Field(..., discriminator="catalog_source")
 
     table_format: TableFormat
 
@@ -44,17 +44,8 @@ class CatalogIntegration(SnowflakeResourceModel):
 
     # ---------- Read-only ----------
 
-    type: Optional[IntegrationType] = Field(
-        default=None,
-        frozen=True
-    )
+    type: Optional[IntegrationType] = Field(default=None, frozen=True)
 
-    category: Optional[IntegrationCategory] = Field(
-        default=None,
-        frozen=True
-    )
+    category: Optional[IntegrationCategory] = Field(default=None, frozen=True)
 
-    created_on: Optional[datetime] = Field(
-        default=None,
-        frozen=True
-    )
+    created_on: Optional[datetime] = Field(default=None, frozen=True)

@@ -5,17 +5,21 @@ from pydantic import BaseModel, Field
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
+
 class IndexState(str, Enum):
     ACTIVE = "ACTIVE"
     SUSPENDED = "SUSPENDED"
     INITIALIZING = "INITIALIZING"
 
+
 class TargetLagBase(BaseModel):
     type: str
+
 
 class UserDefinedLag(TargetLagBase):
     type: Literal["USER_DEFINED"]
     lag_seconds: int
+
 
 class DownstreamLag(TargetLagBase):
     type: Literal["DOWNSTREAM"]
@@ -23,16 +27,13 @@ class DownstreamLag(TargetLagBase):
 
 TargetLag = Union[UserDefinedLag, DownstreamLag]
 
+
 class CortexSearchService(SnowflakeResourceModel):
-    
     search_column: str
     warehouse: IdentifierType
     definition: str
 
-    target_lag: TargetLag = Field(
-        ...,
-        discriminator="type"
-    )
+    target_lag: TargetLag = Field(..., discriminator="type")
 
     columns: Optional[List[str]] = None
     attribute_columns: Optional[List[str]] = None

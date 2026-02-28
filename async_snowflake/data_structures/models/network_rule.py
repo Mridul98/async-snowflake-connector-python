@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional, List, Literal
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel

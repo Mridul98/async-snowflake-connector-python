@@ -1,10 +1,9 @@
-from pydantic import BaseModel, constr, Field
 from typing import List, Optional
-from async_snowflake.data_structures.models.base import SnowflakeResourceModel 
+from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
-class SnowflakeTag(SnowflakeResourceModel):
 
+class SnowflakeTag(SnowflakeResourceModel):
     allowed_values: Optional[List[str]] = []
     propagate: Optional[str] = None  # e.g., 'true'/'false' or custom propagation rules
     on_conflict: Optional[str] = None  # behavior when propagated tag conflicts occur

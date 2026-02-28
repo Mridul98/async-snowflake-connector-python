@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Optional
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
@@ -6,7 +6,6 @@ from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class PasswordPolicyBase(SnowflakeResourceModel):
-
     comment: Optional[str] = None
 
     password_min_length: Optional[int] = None

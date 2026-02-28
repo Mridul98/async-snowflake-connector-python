@@ -1,12 +1,10 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field
 from typing import Optional, List
 from datetime import datetime
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType
 
 
 class EventTableColumn(SnowflakeResourceModel):
-
     name: Optional[str] = None
     datatype: Optional[str] = None
     nullable: Optional[bool] = None
@@ -22,8 +20,8 @@ class EventTableColumn(SnowflakeResourceModel):
 # Main Event Table Model
 # =========================================================
 
-class EventTable(SnowflakeResourceModel):
 
+class EventTable(SnowflakeResourceModel):
     # ---------- Optional Writable ----------
     cluster_by: Optional[List[str]] = None
 
@@ -51,20 +49,8 @@ class EventTable(SnowflakeResourceModel):
 
     search_optimization: Optional[bool] = Field(None, frozen=True)
 
-    search_optimization_progress: Optional[int] = Field(
-        None,
-        ge=0,
-        le=100,
-        frozen=True
-    )
+    search_optimization_progress: Optional[int] = Field(None, ge=0, le=100, frozen=True)
 
-    search_optimization_bytes: Optional[int] = Field(
-        None,
-        ge=0,
-        frozen=True
-    )
+    search_optimization_bytes: Optional[int] = Field(None, ge=0, frozen=True)
 
-    columns: Optional[List[EventTableColumn]] = Field(
-        None,
-        frozen=True
-    )
+    columns: Optional[List[EventTableColumn]] = Field(None, frozen=True)

@@ -3,7 +3,7 @@ from enum import Enum
 from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
-from async_snowflake.data_structures.types.snowflake_types import IdentifierType
+
 
 class ApiProvider(str, Enum):
     AWS_API_GATEWAY = "AWS_API_GATEWAY"
@@ -11,8 +11,10 @@ class ApiProvider(str, Enum):
     AWS_GOV_API_GATEWAY = "AWS_GOV_API_GATEWAY"
     AWS_GOV_PRIVATE_API_GATEWAY = "AWS_GOV_PRIVATE_API_GATEWAY"
 
+
 class ApiHook(BaseModel):
     type: str
+
 
 class AwsHook(ApiHook):
     type: Literal["AwsHook"]
@@ -24,18 +26,14 @@ class AwsHook(ApiHook):
     api_allowed_prefixes: List[str]
     api_blocked_prefixes: Optional[List[str]] = None
 
-class ApiIntegration(SnowflakeResourceModel):
 
-    api_hook: AwsHook = Field(
-        ...,
-        discriminator="type"
-    )
+class ApiIntegration(SnowflakeResourceModel):
+    api_hook: AwsHook = Field(..., discriminator="type")
 
     enabled: bool
 
     comment: Optional[str] = None
 
     created_on: Optional[datetime] = Field(
-        default=None,
-        description="Read-only creation timestamp"
+        default=None, description="Read-only creation timestamp"
     )

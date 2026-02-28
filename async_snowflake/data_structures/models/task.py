@@ -1,4 +1,4 @@
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, Literal
 from async_snowflake.data_structures.models.base import SnowflakeResourceModel
 from async_snowflake.data_structures.types.snowflake_types import IdentifierType
@@ -17,7 +17,6 @@ class TaskTargetCompletionInterval(BaseModel):
 
 
 class SnowflakeTask(SnowflakeResourceModel):
-   
     definition: str
     warehouse: Optional[IdentifierType] = None
     schedule: Optional[CronSchedule] = None
