@@ -22,6 +22,7 @@ def _normalize_base_url(base_url: str) -> str:
         parts = parts._replace(netloc=parts.netloc.replace("_", "-"))
     return urlunsplit(parts)
 
+
 if TYPE_CHECKING:
     from async_snowflake.endpoints.accounts import AccountClient
     from async_snowflake.endpoints.databases import DatabaseClient
