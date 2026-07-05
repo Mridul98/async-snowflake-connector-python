@@ -1,9 +1,22 @@
-from typing import Optional, List
+import asyncio
+from typing import Optional, List, Any, AsyncIterator
+
+import httpx
+
 from .base import SnowflakeClient
 from async_snowflake.data_structures.models.query import (
     QueryResult,
     QueryStatus,
     QueryHistoryEntry,
+)
+
+# Transient transport failures worth retrying: a keep-alive connection closed
+# between requests surfaces as RemoteProtocolError/ReadError; ConnectError
+# covers a failed re-dial. A fresh attempt gets a new connection.
+_RETRYABLE_ERRORS = (
+    httpx.RemoteProtocolError,
+    httpx.ReadError,
+    httpx.ConnectError,
 )
 
 
@@ -12,6 +25,30 @@ class QueryClient:
 
     def __init__(self, client: SnowflakeClient):
         self._client = client
+
+    async def _get_json_with_retry(
+        self,
+        path: str,
+        *,
+        attempts: int = 3,
+        **kwargs,
+    ) -> dict:
+        """GET ``path`` and return the parsed JSON body, retrying transient
+        transport errors with exponential backoff.
+
+        Partition/statement GETs are idempotent, so retrying is safe. Only
+        transport-level drops (see ``_RETRYABLE_ERRORS``) are retried; HTTP
+        error statuses still raise immediately via ``raise_for_status()``.
+        """
+        for attempt in range(attempts):
+            try:
+                response = await self._client._request("GET", path, **kwargs)
+                response.raise_for_status()
+                return response.json()
+            except _RETRYABLE_ERRORS:
+                if attempt == attempts - 1:
+                    raise
+                await asyncio.sleep(0.5 * (2**attempt))
 
     async def execute(
         self,
@@ -145,12 +182,7 @@ class QueryClient:
         Returns:
             QueryResult with rows and metadata
         """
-        response = await self._client._request(
-            "GET",
-            f"/api/v2/statements/{query_id}",
-        )
-        response.raise_for_status()
-        data = response.json()
+        data = await self._get_json_with_retry(f"/api/v2/statements/{query_id}")
 
         # Parse resultSetMetaData the same way execute() does: the SQL API v2
         # response has no top-level "columns"/"rowCount"/"status" keys.
@@ -161,16 +193,16 @@ class QueryClient:
         rows = list(data.get("data", []) or [])
 
         # Large result sets are split into partitions: the first partition is
-        # inline in "data", the rest must be fetched with ?partition=N.
+        # inline in "data", the rest must be fetched with ?partition=N. Each
+        # fetch is retried on transient transport drops so one closed keep-alive
+        # connection does not abort the whole result (see issue #9).
         partitions = meta.get("partitionInfo", []) or []
         for idx in range(1, len(partitions)):
-            part_resp = await self._client._request(
-                "GET",
+            part_data = await self._get_json_with_retry(
                 f"/api/v2/statements/{query_id}",
                 params={"partition": idx},
             )
-            part_resp.raise_for_status()
-            rows.extend(part_resp.json().get("data", []) or [])
+            rows.extend(part_data.get("data", []) or [])
 
         query_state = "success" if "data" in data else "unknown"
 
@@ -181,6 +213,46 @@ class QueryClient:
             query_id=query_id,
             query_state=query_state,
         )
+
+    async def generate_results(self, query_id: str) -> AsyncIterator[List[List[Any]]]:
+        """
+        Stream the results of a completed query one partition at a time.
+
+        Unlike :meth:`get_results`, which materializes every partition into a
+        single list, this async generator fetches one partition at a time and
+        yields it as a batch of rows, keeping memory bounded for large result
+        sets. The first partition is inline in the initial response; the rest
+        are fetched with ?partition=N. Each fetch is retried on transient
+        transport drops (#9). Empty partitions are skipped.
+
+        Args:
+            query_id: The query ID to stream results for
+
+        Yields:
+            One partition at a time as a list of rows (each row a list of
+            column values).
+
+        Usage:
+            async for partition in client.query.generate_results(handle):
+                for row in partition:
+                    process(row)
+        """
+        data = await self._get_json_with_retry(f"/api/v2/statements/{query_id}")
+
+        first = data.get("data", []) or []
+        if first:
+            yield first
+
+        meta = data.get("resultSetMetaData", {})
+        partitions = meta.get("partitionInfo", []) or []
+        for idx in range(1, len(partitions)):
+            part_data = await self._get_json_with_retry(
+                f"/api/v2/statements/{query_id}",
+                params={"partition": idx},
+            )
+            batch = part_data.get("data", []) or []
+            if batch:
+                yield batch
 
     async def cancel(self, query_id: str) -> bool:
         """
