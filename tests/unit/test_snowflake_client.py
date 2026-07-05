@@ -50,6 +50,30 @@ class TestSnowflakeClient:
             mock_http.aclose.assert_called_once()
             mock_auth_client.close.assert_called_once()
 
+    def test_underscore_account_host_normalized(self, mock_auth_client):
+        """Underscore account hosts are rewritten to hyphens for TLS.
+
+        Regression test for GitHub issue #7: underscores are invalid in DNS
+        labels and fail verification against Snowflake's wildcard cert. The host
+        segment must be normalized (_ -> -) while scheme and path are preserved.
+        """
+        client = SnowflakeClient(
+            base_url="https://my_account.us-east-1.snowflakecomputing.com",
+            auth_client=mock_auth_client,
+        )
+        assert (
+            client._base_url
+            == "https://my-account.us-east-1.snowflakecomputing.com"
+        )
+
+    def test_host_without_underscore_unchanged(self, mock_auth_client):
+        """A host without underscores (and trailing slash) is left intact."""
+        client = SnowflakeClient(
+            base_url="https://myaccount.snowflakecomputing.com/",
+            auth_client=mock_auth_client,
+        )
+        assert client._base_url == "https://myaccount.snowflakecomputing.com"
+
     @pytest.mark.asyncio
     async def test_lazy_loading_account_client(self, mock_client):
         """Test account client is created lazily."""
