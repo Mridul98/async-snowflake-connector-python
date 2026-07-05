@@ -38,6 +38,48 @@ async def main():
 asyncio.run(main())
 ```
 
+## Async Queries
+
+For long-running queries, submit the statement asynchronously and poll for
+completion instead of blocking on a single request:
+
+```python
+import asyncio
+
+# Submit the query; returns a statement handle immediately
+handle = await client.query.execute_async("SELECT * FROM big_table")
+
+# Poll until the statement finishes
+status = await client.query.get_status(handle)
+while status.state == "running":
+    await asyncio.sleep(1)
+    status = await client.query.get_status(handle)
+
+# Fetch the full result set (all partitions are reassembled for you)
+result = await client.query.get_results(handle)
+print(f"Rows: {result.row_count}")
+print(f"Columns: {result.columns}")
+```
+
+### Streaming large result sets
+
+`get_results()` loads every partition into memory. For large results, stream
+them one partition (a batch of rows) at a time with `generate_results()`, which
+keeps memory bounded:
+
+```python
+async for partition in client.query.generate_results(handle):
+    for row in partition:
+        process(row)
+```
+
+Each partition fetch is retried automatically on transient connection drops.
+
+> **Account names with underscores:** if your account name contains
+> underscores, the client normalizes the URL host (`_` → `-`) so TLS
+> verification against Snowflake's wildcard certificate succeeds. Pass your
+> account/base URL as-is — the JWT issuer keeps the real account name intact.
+
 ## Fluent Interface
 
 ```python
