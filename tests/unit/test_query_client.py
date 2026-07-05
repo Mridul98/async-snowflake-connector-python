@@ -1,6 +1,7 @@
 """Unit tests for QueryClient."""
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from async_snowflake.endpoints.query import QueryResult
 
@@ -106,6 +107,109 @@ class TestQueryClient:
         # the second partition was fetched with ?partition=1
         _, part_kwargs = mock_client._http_client.request.call_args_list[1]
         assert part_kwargs["params"] == {"partition": 1}
+
+    @pytest.mark.asyncio
+    async def test_get_results_retries_transient_transport_error(self, mock_client):
+        """A dropped keep-alive during a partition fetch is retried (issue #9).
+
+        The first partition attempt raises RemoteProtocolError; get_results must
+        retry and still return the complete result rather than aborting.
+        """
+        main = MagicMock(status_code=200)
+        main.raise_for_status = MagicMock()
+        main.json = MagicMock(
+            return_value={
+                "resultSetMetaData": {
+                    "numRows": 3,
+                    "rowType": [{"name": "ID"}, {"name": "NAME"}],
+                    "partitionInfo": [{"rowCount": 1}, {"rowCount": 2}],
+                },
+                "data": [["1", "a"]],
+            }
+        )
+        part1 = MagicMock(status_code=200)
+        part1.raise_for_status = MagicMock()
+        part1.json = MagicMock(return_value={"data": [["2", "b"], ["3", "c"]]})
+        # initial GET ok; first partition attempt drops; retry succeeds
+        mock_client._http_client.request.side_effect = [
+            main,
+            httpx.RemoteProtocolError("peer closed connection"),
+            part1,
+        ]
+
+        with patch(
+            "async_snowflake.endpoints.query.asyncio.sleep", new=AsyncMock()
+        ) as sleep_mock:
+            result = await mock_client.query.get_results("01c-handle")
+
+        assert result.row_count == 3
+        assert result.rows == [["1", "a"], ["2", "b"], ["3", "c"]]
+        # one retry happened -> one backoff sleep, and three HTTP calls total
+        sleep_mock.assert_awaited_once()
+        assert mock_client._http_client.request.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_get_results_raises_after_retries_exhausted(self, mock_client):
+        """Persistent transport failure re-raises after the retry budget (issue #9)."""
+        main = MagicMock(status_code=200)
+        main.raise_for_status = MagicMock()
+        main.json = MagicMock(
+            return_value={
+                "resultSetMetaData": {
+                    "numRows": 2,
+                    "rowType": [{"name": "ID"}],
+                    "partitionInfo": [{"rowCount": 1}, {"rowCount": 1}],
+                },
+                "data": [["1"]],
+            }
+        )
+        mock_client._http_client.request.side_effect = [
+            main,
+            httpx.RemoteProtocolError("drop 1"),
+            httpx.RemoteProtocolError("drop 2"),
+            httpx.RemoteProtocolError("drop 3"),
+        ]
+
+        with patch("async_snowflake.endpoints.query.asyncio.sleep", new=AsyncMock()):
+            with pytest.raises(httpx.RemoteProtocolError):
+                await mock_client.query.get_results("01c-handle")
+
+        # initial GET + 3 partition attempts (default attempts=3)
+        assert mock_client._http_client.request.call_count == 4
+
+    @pytest.mark.asyncio
+    async def test_generate_results_streams_partition_batches(self, mock_client):
+        """generate_results yields one partition (batch of rows) at a time, with retry."""
+        main = MagicMock(status_code=200)
+        main.raise_for_status = MagicMock()
+        main.json = MagicMock(
+            return_value={
+                "resultSetMetaData": {
+                    "rowType": [{"name": "N"}],
+                    "partitionInfo": [{"rowCount": 1}, {"rowCount": 2}],
+                },
+                "data": [["1"]],
+            }
+        )
+        part1 = MagicMock(status_code=200)
+        part1.raise_for_status = MagicMock()
+        part1.json = MagicMock(return_value={"data": [["2"], ["3"]]})
+        # first partition attempt drops, retry succeeds
+        mock_client._http_client.request.side_effect = [
+            main,
+            httpx.RemoteProtocolError("peer closed connection"),
+            part1,
+        ]
+
+        batches = []
+        with patch("async_snowflake.endpoints.query.asyncio.sleep", new=AsyncMock()):
+            async for partition in mock_client.query.generate_results("01c-handle"):
+                batches.append(partition)
+
+        # one batch per partition (not flattened rows)
+        assert batches == [[["1"]], [["2"], ["3"]]]
+        # and flattening yields every row
+        assert [row for batch in batches for row in batch] == [["1"], ["2"], ["3"]]
 
 
 class TestQueryResult:

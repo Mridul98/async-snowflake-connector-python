@@ -70,6 +70,29 @@ class TestQueryClientAsyncIntegration:
         # rows are concatenated across all partitions, not just the first
         assert len(result.rows) == 50000
 
+    @pytest.mark.asyncio
+    async def test_generate_results_streams_all_partitions(self, snowflake_client):
+        """generate_results yields partition batches covering every row."""
+        handle = await snowflake_client.query.execute_async(
+            "SELECT SEQ4() AS N FROM TABLE(GENERATOR(ROWCOUNT => 50000))"
+        )
+
+        for _ in range(60):
+            status = await snowflake_client.query.get_status(handle)
+            if status.state != "running":
+                break
+            await asyncio.sleep(1.0)
+
+        row_count = 0
+        batches = 0
+        async for partition in snowflake_client.query.generate_results(handle):
+            batches += 1
+            row_count += len(partition)
+
+        assert row_count == 50000
+        # 50k rows span more than one partition
+        assert batches > 1
+
 
 class TestQueryClientIntegration:
     """Integration tests for QueryClient."""
