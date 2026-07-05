@@ -85,21 +85,19 @@ class QueryClient:
         Returns:
             Query ID for polling status
         """
-        params = {
-            "statement": sql,
-            "asyncExecution": True,
-        }
+        body = {"statement": sql}
         if database:
-            params["database"] = database
+            body["database"] = database
         if schema:
-            params["schema"] = schema
+            body["schema"] = schema
         if warehouse:
-            params["warehouse"] = warehouse
+            body["warehouse"] = warehouse
 
         response = await self._client._request(
             "POST",
             "/api/v2/statements",
-            json=params,
+            params={"async": "true"},
+            json=body,
         )
         response.raise_for_status()
         data = response.json()
@@ -123,11 +121,18 @@ class QueryClient:
         response.raise_for_status()
         data = response.json()
 
+        # SQL API v2 does not return a "status" field. An in-progress statement
+        # comes back as HTTP 202 (code 333334) and a finished one as HTTP 200
+        # (code 090001) with resultSetMetaData. Derive state from the HTTP
+        # status; row count lives under resultSetMetaData.numRows.
+        state = "running" if response.status_code == 202 else "success"
+        meta = data.get("resultSetMetaData", {})
+
         return QueryStatus(
             query_id=query_id,
-            state=data.get("status"),
-            error_message=data.get("errorMessage"),
-            row_count=data.get("rowCount"),
+            state=state,
+            error_message=None,
+            row_count=meta.get("numRows"),
         )
 
     async def get_results(self, query_id: str) -> QueryResult:
@@ -147,12 +152,34 @@ class QueryClient:
         response.raise_for_status()
         data = response.json()
 
+        # Parse resultSetMetaData the same way execute() does: the SQL API v2
+        # response has no top-level "columns"/"rowCount"/"status" keys.
+        meta = data.get("resultSetMetaData", {})
+        row_type = meta.get("rowType", [])
+        column_names = [col.get("name") for col in row_type] if row_type else []
+
+        rows = list(data.get("data", []) or [])
+
+        # Large result sets are split into partitions: the first partition is
+        # inline in "data", the rest must be fetched with ?partition=N.
+        partitions = meta.get("partitionInfo", []) or []
+        for idx in range(1, len(partitions)):
+            part_resp = await self._client._request(
+                "GET",
+                f"/api/v2/statements/{query_id}",
+                params={"partition": idx},
+            )
+            part_resp.raise_for_status()
+            rows.extend(part_resp.json().get("data", []) or [])
+
+        query_state = "success" if "data" in data else "unknown"
+
         return QueryResult(
-            rows=data.get("data", []),
-            columns=data.get("columns", []),
-            row_count=data.get("rowCount"),
+            rows=rows,
+            columns=column_names,
+            row_count=meta.get("numRows"),
             query_id=query_id,
-            query_state=data.get("status"),
+            query_state=query_state,
         )
 
     async def cancel(self, query_id: str) -> bool:

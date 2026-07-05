@@ -2,8 +2,26 @@ from __future__ import annotations
 
 import httpx
 from typing import Optional, TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 from async_snowflake.authentication.auth_clients import SnowflakeBaseAuthClient
+
+
+def _normalize_base_url(base_url: str) -> str:
+    """Normalize the host segment of a Snowflake base URL.
+
+    Underscores are invalid in DNS labels, and httpx will not match an
+    underscore host against Snowflake's ``*.snowflakecomputing.com`` wildcard
+    certificate, so an account name containing underscores fails TLS
+    verification. Snowflake's own connectors rewrite ``_`` -> ``-`` in the host
+    before connecting; mirror that here. Only the network location is touched --
+    the JWT issuer must keep the real account name with underscores intact.
+    """
+    parts = urlsplit(base_url.rstrip("/"))
+    if "_" in parts.netloc:
+        parts = parts._replace(netloc=parts.netloc.replace("_", "-"))
+    return urlunsplit(parts)
+
 
 if TYPE_CHECKING:
     from async_snowflake.endpoints.accounts import AccountClient
@@ -40,7 +58,7 @@ class SnowflakeClient:
         auth_client: SnowflakeBaseAuthClient,
         timeout: float = 60.0,
     ):
-        self._base_url = base_url.rstrip("/")
+        self._base_url = _normalize_base_url(base_url)
         self._auth_client = auth_client
         self._timeout = timeout
         self._http_client: Optional[httpx.AsyncClient] = None
